@@ -377,20 +377,72 @@ void TiltControl(int input = 0) {
 // ================================================================
 // ===                       Launch Control                         ===
 // ================================================================
-int cycleCount = 0;
-void LaunchControl() {
-  MotorControl(Axis_Launch, 4000);
-  delay(1000);
-  MotorControl(Axis_Launch, -3500);
-  delay(500);
-  MotorControl(Axis_Launch, STOP);
-  delay(50);
-  MotorControl(Axis_Launch, 4000);
-  delay(700);
-  MotorControl(Axis_Launch, STOP);
+// State definitions for the launch control sequence
+enum LaunchState {
+  READY,
+  FIRE_STAGE,
+  RESET_STAGE,
+  LOAD_STAGE,
+  COMPLETE,
+  ERROR
+};
 
-  cycleCount++;
-  Serial.println("Cycle # :\t" + String(cycleCount));
+// Initialize the state and timing variables
+LaunchState currentState = READY;
+unsigned long previousMillis = 0;
+int cycleCount = 0;
+
+// The LaunchControl function now using a non-blocking approach
+void LaunchControl() {
+  unsigned long currentMillis = millis();
+
+  switch (currentState) {
+    case FIRE_STAGE:
+      if (currentMillis - previousMillis >= 1000) {
+        MotorControl(Axis_Launch, STOP);
+        if (currentMillis - previousMillis >= 1050) {
+          currentState = RESET_STAGE;
+          previousMillis = currentMillis;
+        }
+      } else MotorControl(Axis_Launch, 4000);
+      break;
+
+    case RESET_STAGE:
+      if (currentMillis - previousMillis >= 1000) {
+        MotorControl(Axis_Launch, STOP);
+        if (currentMillis - previousMillis >= 1050) {
+          currentState = LOAD_STAGE;
+          previousMillis = currentMillis;
+        }
+      } else MotorControl(Axis_Launch, -3500);
+      break;
+
+    case LOAD_STAGE:
+      if (currentMillis - previousMillis >= 600) {
+        MotorControl(Axis_Launch, STOP);
+        if (currentMillis - previousMillis >= 3000) {
+          currentState = COMPLETE;
+          previousMillis = currentMillis;
+        }
+      } else MotorControl(Axis_Launch, 4000);
+      break;
+
+    case COMPLETE:
+      cycleCount++;
+      Serial.println("Cycle # :\t" + String(cycleCount));
+      currentState = READY;  // Reset state to start for next cycle
+      break;
+
+    case READY:
+      // if (currentMillis - previousMillis >= 3000) {
+      //   currentState = FIRE_STAGE;
+      //   previousMillis = currentMillis;
+      // }
+      break;
+
+    default:
+      currentState = ERROR;
+  }
 }
 
 
@@ -416,8 +468,7 @@ void loop() {
   Loop_MPU();
   PanControl(0);
   TiltControl(80);
-  // LaunchControl();
-  //delay(3000);
+  LaunchControl();
 
   //Serial.println("Motor Ouput (Tilt : Pan) =\t" + String(Tilt_Output) + "\t:\t" + String(Pan_Output));
 }
