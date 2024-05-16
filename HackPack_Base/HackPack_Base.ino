@@ -551,9 +551,7 @@ void Serial_Camera() {
       DATA_X = Serial1.readStringUntil('\t');  // Read the data until a tab is encountered
       // Convert the ASCII integer to an int
       integerValue = atoi(DATA_X.c_str());  // Convert the String to a char array
-
-
-      if (TargetMode)Pan_Move(constrain(int(integerValue/2),-5,5));
+      if (TargetMode&& (abs(integerValue)>5) )Pan_Move(constrain(int(integerValue),-3,3));
 
       Serial.print("Received Location:\tX ");
       Serial.print(integerValue);
@@ -564,7 +562,7 @@ void Serial_Camera() {
         DATA_Y = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
         // Convert the ASCII integer to an int
         integerValue = atoi(DATA_Y.c_str());  // Convert the String to a char array
-        if (TargetMode)Tilt_Move(constrain(int(integerValue/2),-5,5));
+        if (TargetMode && (abs(integerValue)>5))Tilt_Move(constrain(int(integerValue),-1,2));
 
         Serial.print("\tY ");
         Serial.println(integerValue);
@@ -602,8 +600,8 @@ void Serial_Camera() {
       Launch();
 
     } else if (header == 'T') {
-      Serial.println("Received Command: Targetmode = " + String(TargetMode));
       TargetMode = !TargetMode;
+      Serial.println("Received Command: Targetmode = " + String(TargetMode));
     }
   }
 }
