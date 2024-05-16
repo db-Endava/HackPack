@@ -3,9 +3,13 @@
 // ================================================================
 #define USB_DataP 19
 #define USB_DataN 18
+
 void INIT_Serial() {
   Serial.begin(115200);
-  delay(1000);
+  long Timeout = millis() + 3000;
+  while (!Serial || (millis() > Timeout)) {
+    ;  // wait for serial port to connect. Needed for native USB port only
+  }
   Serial.println("Setup Serial Complete");
 }
 
@@ -37,15 +41,18 @@ const int Axis_Yaw = 2;
 const int STOP = 0;
 
 // ================================================================
-// ===                       Motor Setup                        ===
+// ===                       IO & Motor Setup                        ===
 // ================================================================
+void INIT_IO() {
+  // Setup LEDC for PWM
+  for (int i = 0; i < 6; ++i) {
+    pinMode(motorPins[i / 2][i % 2], OUTPUT);      // Set PWM pins as OUTPUT
+  }
+}
 void INIT_Motors() {
   Serial.print("Setup Motors : ");
 
-  // Setup LEDC for PWM
-  for (int i = 0; i < 6; ++i) {
-    pinMode(motorPins[i / 2][i % 2], OUTPUT);  // Set PWM pins as OUTPUT
-  }
+
 
   pinMode(nSLEEP_PIN, OUTPUT);     // Set nSLEEP pin as OUTPUT
   digitalWrite(nSLEEP_PIN, true);  // Enable motor drivers by setting nSLEEP to true (HIGH)
@@ -121,18 +128,18 @@ void MotorControl(int motorIndex, int Power, int MinStartingPower = 0) {
 #include <Adafruit_NeoPixel.h>
 #define LED_PIN 0       // Which pin on the Arduino is connected to the NeoPixels?
 #define LED_COUNT 1     // How many NeoPixels are attached to the Arduino?
-#define BRIGHTNESS 255  // Set BRIGHTNESS to about 1/5 (max = 255)
+#define BRIGHTNESS 50  // Set BRIGHTNESS to about 1/5 (max = 255)
 
 Adafruit_NeoPixel LED(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 //Predefine common colours
-const uint32_t RED = LED.Color(255, 0, 0);
-const uint32_t GREEN = LED.Color(0, 255, 0);
-const uint32_t BLUE = LED.Color(0, 0, 255);
-const uint32_t YELLOW = LED.Color(255, 255, 0);
-const uint32_t PURPLE = LED.Color(255, 0, 255);
-const uint32_t CYAN = LED.Color(0, 255, 255);
-const uint32_t WHITE = LED.Color(255, 255, 255);
+const uint32_t RED = LED.Color(BRIGHTNESS, 0, 0);
+const uint32_t GREEN = LED.Color(0, BRIGHTNESS, 0);
+const uint32_t BLUE = LED.Color(0, 0, BRIGHTNESS);
+const uint32_t YELLOW = LED.Color(BRIGHTNESS, BRIGHTNESS, 0);
+const uint32_t PURPLE = LED.Color(BRIGHTNESS, 0, BRIGHTNESS);
+const uint32_t CYAN = LED.Color(0, BRIGHTNESS, BRIGHTNESS);
+const uint32_t WHITE = LED.Color(BRIGHTNESS, BRIGHTNESS, BRIGHTNESS);
 const uint32_t OFF = LED.Color(0, 0, 0);
 
 void INIT_LED_rgb() {
@@ -160,6 +167,8 @@ void LED_SetColour(uint32_t colour) {
 // ================================================================
 const int rainbowSpeed = 30;  // Adjust this value for the desired speed
 static uint32_t lastTime = 0;
+#define BRIGHTNESS 50  // Set BRIGHTNESS to about 1/5 (max = 255)
+
 void LED_Rainbow() {
   if ((millis() - lastTime) > rainbowSpeed) {
     int pixelHue = (millis() * 2) % 65536;  // Ensure pixelHue stays within the valid range
@@ -301,7 +310,8 @@ void Loop_MPU() {
 // ================================================================
 #include <PID_v1.h>
 
-double Pan_Kp = 100, Pan_Ki = 0, Pan_Kd = 0, Pan_Setpoint, Pan_Input, Pan_Output;
+double Pan_Target = 0;
+double Pan_Kp = 200, Pan_Ki = 0, Pan_Kd = 0, Pan_Setpoint, Pan_Input, Pan_Output;
 PID Pan_PID(&Pan_Input, &Pan_Output, &Pan_Setpoint, Pan_Kp, Pan_Ki, Pan_Kd, DIRECT);
 void Pan_PID_Setup() {
   Serial.print("Pan PID Setup : ");
@@ -313,7 +323,8 @@ void Pan_PID_Setup() {
   Serial.println("Complete");
 }
 
-double Tilt_Kp = 100, Tilt_Ki = 0, Tilt_Kd = 0, Tilt_Setpoint, Tilt_Input, Tilt_Output;
+double Tilt_Target = 80;
+double Tilt_Kp = 150, Tilt_Ki = 0, Tilt_Kd = 0, Tilt_Setpoint, Tilt_Input, Tilt_Output;
 PID Tilt_PID(&Tilt_Input, &Tilt_Output, &Tilt_Setpoint, Tilt_Kp, Tilt_Ki, Tilt_Kd, DIRECT);
 void Tilt_PID_Setup() {
   Serial.print("Tilt PID Setup : ");
@@ -331,13 +342,20 @@ void Tilt_PID_Setup() {
 
 void PanControl(int input = 0) {
 
-  Pan_Setpoint = input;
+  Pan_Setpoint = constrain(input, -120, 120);
   Pan_Input = Yaw;
   Pan_PID.Compute();
 
-  if (abs(Pan_Setpoint - Pan_Input) > 1) MotorControl(Axis_Yaw, Pan_Output, 2500);
+  if (abs(Pan_Setpoint - Pan_Input) > 1) MotorControl(Axis_Yaw, -Pan_Output, 600);
   else MotorControl(Axis_Yaw, STOP);
+  // Serial.println("CurrentYaw: "+String(Pan_Input) + " Target: " + String(Pan_Setpoint)+ " Output: " + String(Pan_Output));
 }
+
+void Pan_Move(double value) {
+  Pan_Target += value;
+  Pan_Target = constrain(Pan_Target, -100, 100);
+}
+
 
 // ================================================================
 // ===                Home Tilt / Pitch Axis                     ===
@@ -366,12 +384,18 @@ void Home_TiltAxis() {
 
 void TiltControl(int input = 0) {
   int MinPower = 1500;
-  Tilt_Setpoint = input;
+  Tilt_Setpoint = constrain(input, 0, 80);
+
   Tilt_Input = Pitch;
   Tilt_PID.Compute();
 
   if (abs(Tilt_Setpoint - Tilt_Input) > 1) MotorControl(Axis_Pitch, Tilt_Output, MinPower);
   else MotorControl(Axis_Pitch, STOP);
+}
+
+void Tilt_Move(double value) {
+  Tilt_Target += value;
+  Tilt_Target = constrain(Tilt_Target, 0, 80);
 }
 
 // ================================================================
@@ -384,25 +408,28 @@ enum LaunchState {
   RESET_STAGE,
   LOAD_STAGE,
   COMPLETE,
-  ERROR
+  ERROR,
+  START
 };
 
 // Initialize the state and timing variables
-LaunchState currentState = READY;
+LaunchState currentLaunchState = READY;
 unsigned long previousMillis = 0;
 int cycleCount = 0;
 
 // The LaunchControl function now using a non-blocking approach
 void LaunchControl() {
+
   unsigned long currentMillis = millis();
 
-  switch (currentState) {
+  switch (currentLaunchState) {
     case FIRE_STAGE:
       if (currentMillis - previousMillis >= 1000) {
         MotorControl(Axis_Launch, STOP);
         if (currentMillis - previousMillis >= 1050) {
-          currentState = RESET_STAGE;
+          currentLaunchState = RESET_STAGE;
           previousMillis = currentMillis;
+          Serial.println("Launch Reset");
         }
       } else MotorControl(Axis_Launch, 4000);
       break;
@@ -411,8 +438,9 @@ void LaunchControl() {
       if (currentMillis - previousMillis >= 1000) {
         MotorControl(Axis_Launch, STOP);
         if (currentMillis - previousMillis >= 1050) {
-          currentState = LOAD_STAGE;
+          currentLaunchState = LOAD_STAGE;
           previousMillis = currentMillis;
+          Serial.println("Launch Load");
         }
       } else MotorControl(Axis_Launch, -3500);
       break;
@@ -420,8 +448,8 @@ void LaunchControl() {
     case LOAD_STAGE:
       if (currentMillis - previousMillis >= 600) {
         MotorControl(Axis_Launch, STOP);
-        if (currentMillis - previousMillis >= 3000) {
-          currentState = COMPLETE;
+        if (currentMillis - previousMillis >= 300) {
+          currentLaunchState = COMPLETE;
           previousMillis = currentMillis;
         }
       } else MotorControl(Axis_Launch, 4000);
@@ -429,29 +457,164 @@ void LaunchControl() {
 
     case COMPLETE:
       cycleCount++;
-      Serial.println("Cycle # :\t" + String(cycleCount));
-      currentState = READY;  // Reset state to start for next cycle
+      Serial.println("Launch Complete! Cycle # :\t" + String(cycleCount));
+      currentLaunchState = READY;  // Reset state to start for next cycle
+      Serial.println("Launch Ready");
       break;
 
     case READY:
-      // if (currentMillis - previousMillis >= 3000) {
-      //   currentState = FIRE_STAGE;
-      //   previousMillis = currentMillis;
-      // }
+      break;
+
+    case START:
+      Serial.println("Launch Started - FIRE!");
+      currentLaunchState = FIRE_STAGE;  // Reset state to start for next cycle
+      previousMillis = currentMillis;
       break;
 
     default:
-      currentState = ERROR;
+      currentLaunchState = ERROR;
   }
+}
+
+void Launch() {
+  if (currentLaunchState == READY) currentLaunchState = START;
 }
 
 
 
 // ================================================================
+// ===                Serial Command Functions                  ===
+// ================================================================
+
+String serialBuffer = "";  // Buffer to hold incoming data
+int Position_Pan = 0;
+int Position_Tilt = 80;
+
+void Serial_USB() {
+  while (Serial.available()) {               // Check if there is data on the serial port
+    char inChar = (char)Serial.read();       // Read a character from the serial buffer
+    Serial.print(inChar);                    // Echo the command for debugging
+    if (inChar == '\n' || inChar == '\r') {  // If the end of a command is received
+      if (serialBuffer.length() > 0) {
+        ProcessCommand(serialBuffer);  // Process the complete command
+        serialBuffer = "";             // Clear the buffer after processing
+      }
+    } else {
+      serialBuffer += inChar;  // Add the incoming character to the buffer
+    }
+  }
+}
+
+void ProcessCommand(String command) {
+  // Process the command string
+  Serial.println("Received2 command: " + command);  // Echo the command for debugging
+
+  // Example command processing
+  if (command == "d") {
+    Pan_Target += 20;  // Move pan by 10 degrees
+  } else if (command == "a") {
+    Pan_Target -= 20;  // Move pan by -10 degrees
+  } else if (command == "w") {
+    Tilt_Target += 10;  // Increase tilt by 10 degrees
+  } else if (command == "s") {
+    Tilt_Target -= 10;  // Decrease tilt by 10 degrees
+  } else if (command == "home") {
+    Home_TiltAxis();  // Home the tilt axis
+    Pan_Target = 0;
+  } else if (command == "l") {
+    Launch();
+  } else {
+    Serial.println("ERROR : Unknown command");  // Handle unknown commands
+  }
+}
+
+// ================================================================
+// ===                    Serial Control                        ===
+// ================================================================
+#define UART_DataTx 21
+#define UART_DataRx 20
+void INIT_Serial1() {
+  Serial1.begin(115200, SERIAL_8N1, UART_DataRx, UART_DataTx);
+  Serial.println("Serial1 start");
+}
+
+
+int integerValue = 0;
+bool TargetMode = 0;
+void Serial_Camera() {
+
+  if (Serial1.available()) {
+    char header = Serial1.read();  // Read the header 'X'
+    if (header == 'X') {
+      // Read the ASCII integer as a string
+      String DATA_X;
+      DATA_X = Serial1.readStringUntil('\t');  // Read the data until a tab is encountered
+      // Convert the ASCII integer to an int
+      integerValue = atoi(DATA_X.c_str());  // Convert the String to a char array
+
+
+      if (TargetMode)Pan_Move(constrain(int(integerValue/2),-5,5));
+
+      Serial.print("Received Location:\tX ");
+      Serial.print(integerValue);
+
+      header = Serial1.read();
+      if (header == 'Y') {
+        String DATA_Y;
+        DATA_Y = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
+        // Convert the ASCII integer to an int
+        integerValue = atoi(DATA_Y.c_str());  // Convert the String to a char array
+        if (TargetMode)Tilt_Move(constrain(int(integerValue/2),-5,5));
+
+        Serial.print("\tY ");
+        Serial.println(integerValue);
+      }
+    } else if (header == 'U') {
+      String DATA_U;
+      DATA_U = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
+      Serial.println("Received Command: Up");
+      integerValue = atoi(DATA_U.c_str());  // Convert the String to a char array
+      Tilt_Move(-integerValue);
+
+    } else if (header == 'D') {
+      String DATA_D;
+      DATA_D = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
+      Serial.println("Received Command: Down");
+      integerValue = atoi(DATA_D.c_str());  // Convert the String to a char array
+      Tilt_Move(integerValue);
+
+    } else if (header == 'R') {
+      String DATA_R;
+      DATA_R = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
+      Serial.println("Received Command: Right");
+      integerValue = atoi(DATA_R.c_str());  // Convert the String to a char array
+      Pan_Move(integerValue);
+
+    } else if (header == 'L') {
+      String DATA_L;
+      DATA_L = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
+      Serial.println("Received Command: Left");
+      integerValue = atoi(DATA_L.c_str());  // Convert the String to a char array
+      Pan_Move(-integerValue);
+
+    } else if (header == 'S') {
+      Serial.println("Received Command: SHOOT");
+      Launch();
+
+    } else if (header == 'T') {
+      Serial.println("Received Command: Targetmode = " + String(TargetMode));
+      TargetMode = !TargetMode;
+    }
+  }
+}
+
+// ================================================================
 // ===                       Main Setup                         ===
 // ================================================================
 void setup() {
+  INIT_IO();
   INIT_Serial();
+  INIT_Serial1();
   INIT_Motors();
   Home_TiltAxis();
   INIT_LED_rgb();
@@ -463,12 +626,22 @@ void setup() {
 // ================================================================
 // ===                        Main Loop                         ===
 // ================================================================
+
 void loop() {
   LED_Rainbow();
+
   Loop_MPU();
-  PanControl(0);
-  TiltControl(80);
+
+  Serial_USB();  // Check for new serial commands
+  Serial_Camera();
+
+  Pan_Target = constrain(Pan_Target, -120, 120);
+  Tilt_Target = constrain(Tilt_Target, 0, 80);
+  PanControl(Pan_Target);
+  TiltControl(Tilt_Target);
+
   LaunchControl();
+
 
   //Serial.println("Motor Ouput (Tilt : Pan) =\t" + String(Tilt_Output) + "\t:\t" + String(Pan_Output));
 }
