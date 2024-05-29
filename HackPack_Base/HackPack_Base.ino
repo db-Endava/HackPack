@@ -427,7 +427,7 @@ void LaunchControl() {
 
   switch (currentLaunchState) {
     case FIRE_STAGE:
-      if (currentMillis - previousMillis >= 1000) {
+      if (currentMillis - previousMillis >= 3000) {
         MotorControl(Axis_Launch, STOP);
         if (currentMillis - previousMillis >= 1050) {
           currentLaunchState = RESET_STAGE;
