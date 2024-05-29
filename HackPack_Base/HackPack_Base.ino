@@ -60,9 +60,11 @@ void INIT_Motors() {
 
   Start_Tone();  // audiable test of each motor
 
+uint32_t PWM_frequency = 20000;
+uint8_t PWM_resolution = 8;
+
   for (int i = 0; i < 6; ++i) {
-    ledcSetup(pwmChannels[i], 20000, 8);                     // PWM frequency: 5000 Hz, resolution: 8-bit
-    ledcAttachPin(motorPins[i / 2][i % 2], pwmChannels[i]);  // Attach PWM to the motor PWM pin
+    ledcAttachChannel(motorPins[i / 2][i % 2], PWM_frequency, PWM_resolution, pwmChannels[i]);
   }
 
   Serial.println("Setup Compelete");
@@ -347,7 +349,7 @@ void PanControl(int input = 0) {
   Pan_Input = Yaw;
   Pan_PID.Compute();
 
-  if (abs(Pan_Setpoint - Pan_Input) > 1) MotorControl(Axis_Yaw, -Pan_Output, 600);
+  if (abs(Pan_Setpoint - Pan_Input) > 1) MotorControl(Axis_Yaw, Pan_Output, 600);
   else MotorControl(Axis_Yaw, STOP);
   // Serial.println("CurrentYaw: "+String(Pan_Input) + " Target: " + String(Pan_Setpoint)+ " Output: " + String(Pan_Output));
 }
@@ -642,5 +644,5 @@ void loop() {
   LaunchControl();
 
 
-  //Serial.println("Motor Ouput (Tilt : Pan) =\t" + String(Tilt_Output) + "\t:\t" + String(Pan_Output));
+  Serial.println("Motor Ouput (Tilt : Pan) =\t" + String(Tilt_Output) + "\t:\t" + String(Pan_Output));
 }
