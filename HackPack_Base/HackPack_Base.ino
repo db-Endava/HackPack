@@ -2,8 +2,8 @@
 // ================================================================
 // ===         Serial Declarations and configurations           ===
 // ================================================================
-#define USB_DataP 19
-#define USB_DataN 18
+// #define USB_DataP 19
+// #define USB_DataN 18
 
 void INIT_Serial() {
   Serial.begin(115200);
@@ -33,7 +33,6 @@ const int motorPins[3][2] = {
   { M3_A_PIN, M3_B_PIN }   // Motor 3: PWM_A, PWM_B
 };
 
-const int pwmChannels[6] = { 0, 1, 2, 3, 4, 5 };  // PWM channels for motors
 
 const int Axis_Pitch = 0;
 const int Axis_Launch = 1;
@@ -46,26 +45,31 @@ const int STOP = 0;
 // ================================================================
 void INIT_IO() {
   // Setup LEDC for PWM
-  for (int i = 0; i < 6; ++i) {
-    pinMode(motorPins[i / 2][i % 2], OUTPUT);      // Set PWM pins as OUTPUT
-  }
+  pinMode(M1_A_PIN, OUTPUT);  // Set PWM pins as OUTPUT
+  pinMode(M1_B_PIN, OUTPUT);  // Set PWM pins as OUTPUT
+  pinMode(M2_A_PIN, OUTPUT);  // Set PWM pins as OUTPUT
+  pinMode(M2_B_PIN, OUTPUT);  // Set PWM pins as OUTPUT
+  pinMode(M3_A_PIN, OUTPUT);  // Set PWM pins as OUTPUT
+  pinMode(M3_B_PIN, OUTPUT);  // Set PWM pins as OUTPUT
 }
+
 void INIT_Motors() {
   Serial.print("Setup Motors : ");
-
-
 
   pinMode(nSLEEP_PIN, OUTPUT);     // Set nSLEEP pin as OUTPUT
   digitalWrite(nSLEEP_PIN, true);  // Enable motor drivers by setting nSLEEP to true (HIGH)
 
   Start_Tone();  // audiable test of each motor
 
-uint32_t PWM_frequency = 20000;
-uint8_t PWM_resolution = 8;
+  uint32_t PWM_frequency = 15000;
+  uint8_t PWM_resolution = 8;
 
-  for (int i = 0; i < 6; ++i) {
-    ledcAttachChannel(motorPins[i / 2][i % 2], PWM_frequency, PWM_resolution, pwmChannels[i]);
-  }
+  ledcAttach(M1_A_PIN, PWM_frequency, PWM_resolution);
+  ledcAttach(M1_B_PIN, PWM_frequency, PWM_resolution);
+  ledcAttach(M2_A_PIN, PWM_frequency, PWM_resolution);
+  ledcAttach(M2_B_PIN, PWM_frequency, PWM_resolution);
+  ledcAttach(M3_A_PIN, PWM_frequency, PWM_resolution);
+  ledcAttach(M3_B_PIN, PWM_frequency, PWM_resolution);
 
   Serial.println("Setup Compelete");
 }
@@ -87,8 +91,8 @@ void Start_Tone() {
       while (micros() < WaitTime) {}               // hold state for set time
       state = !state;                              // invert state to roate opposite direction
     }
-    digitalWrite(motorPins[i][0], 0);  // stop motor
-    digitalWrite(motorPins[i][1], 0);
+    digitalWrite(motorPins[i][0], STOP);  // stop motor
+    digitalWrite(motorPins[i][1], STOP);
     Serial.print(" _ ");
     delay(50);  // between motor iterations
   }
@@ -113,15 +117,15 @@ void MotorControl(int motorIndex, int Power, int MinStartingPower = 0) {
   // Set the direction based on the sign of the speed
   if (Power > STOP) {
     // Move forward: set PWM_A to speed, PWM_B to 0
-    ledcWrite(pwmChannels[motorIndex * 2], pwmValue);  // PWM_A
-    ledcWrite(pwmChannels[motorIndex * 2 + 1], 0);     // PWM_B
+    ledcWrite(motorPins[motorIndex][0], pwmValue);  // PWM_A
+    ledcWrite(motorPins[motorIndex][1], STOP);      // PWM_B
   } else if (Power < STOP) {
     // Move backward: set PWM_A to 0, PWM_B to speed
-    ledcWrite(pwmChannels[motorIndex * 2], 0);             // PWM_A
-    ledcWrite(pwmChannels[motorIndex * 2 + 1], pwmValue);  // PWM_B
+    ledcWrite(motorPins[motorIndex][0], STOP);      // PWM_A
+    ledcWrite(motorPins[motorIndex][1], pwmValue);  // PWM_B
   } else {
-    ledcWrite(pwmChannels[motorIndex * 2], STOP);      // PWM_A
-    ledcWrite(pwmChannels[motorIndex * 2 + 1], STOP);  // PWM_B
+    ledcWrite(motorPins[motorIndex][0], STOP);  // PWM_A
+    ledcWrite(motorPins[motorIndex][1], STOP);  // PWM_B
   }
 }
 
@@ -129,8 +133,8 @@ void MotorControl(int motorIndex, int Power, int MinStartingPower = 0) {
 // ===        LED_rgb Declarations and configurations           ===
 // ================================================================
 #include <Adafruit_NeoPixel.h>
-#define LED_PIN 0       // Which pin on the Arduino is connected to the NeoPixels?
-#define LED_COUNT 1     // How many NeoPixels are attached to the Arduino?
+#define LED_PIN 0      // Which pin on the Arduino is connected to the NeoPixels?
+#define LED_COUNT 1    // How many NeoPixels are attached to the Arduino?
 #define BRIGHTNESS 50  // Set BRIGHTNESS to about 1/5 (max = 255)
 
 Adafruit_NeoPixel LED(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -168,16 +172,16 @@ void LED_SetColour(uint32_t colour) {
 // ================================================================
 // ===                  LED_rgb Rainbow cycle function                      ===
 // ================================================================
-const int rainbowSpeed = 30;  // Adjust this value for the desired speed
-static uint32_t lastTime = 0;
-#define BRIGHTNESS 50  // Set BRIGHTNESS to about 1/5 (max = 255)
-
+const int rainbowSpeed = 11;  // Adjust this value for the desired speed
+unsigned long TimeLimit_Neo = 0;
+int pixelHue = 0;
 void LED_Rainbow() {
-  if ((millis() - lastTime) > rainbowSpeed) {
-    int pixelHue = (millis() * 2) % 65536;  // Ensure pixelHue stays within the valid range
+  if (millis() > TimeLimit_Neo) {
+    if (pixelHue > 65535) pixelHue = 1;
+    pixelHue += 100;
     LED.setPixelColor(0, LED.gamma32(LED.ColorHSV(pixelHue)));
     LED.show();
-    lastTime = millis();  // Save time of last movement
+    TimeLimit_Neo = millis() + rainbowSpeed;  // Save time of last movement
   }
 }
 
@@ -427,7 +431,7 @@ void LaunchControl() {
 
   switch (currentLaunchState) {
     case FIRE_STAGE:
-      if (currentMillis - previousMillis >= 3000) {
+      if (currentMillis - previousMillis >= 1000) {
         MotorControl(Axis_Launch, STOP);
         if (currentMillis - previousMillis >= 1050) {
           currentLaunchState = RESET_STAGE;
@@ -510,7 +514,7 @@ void Serial_USB() {
 
 void ProcessCommand(String command) {
   // Process the command string
-  Serial.println("Received2 command: " + command);  // Echo the command for debugging
+  Serial.println("Received USB command: " + command);  // Echo the command for debugging
 
   // Example command processing
   if (command == "d") {
@@ -554,7 +558,7 @@ void Serial_Camera() {
       DATA_X = Serial1.readStringUntil('\t');  // Read the data until a tab is encountered
       // Convert the ASCII integer to an int
       integerValue = atoi(DATA_X.c_str());  // Convert the String to a char array
-      if (TargetMode&& (abs(integerValue)>5) )Pan_Move(constrain(int(integerValue),-3,3));
+      if (TargetMode && (abs(integerValue) > 5)) Pan_Move(constrain(int(integerValue), -3, 3));
 
       Serial.print("Received Location:\tX ");
       Serial.print(integerValue);
@@ -565,7 +569,7 @@ void Serial_Camera() {
         DATA_Y = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
         // Convert the ASCII integer to an int
         integerValue = atoi(DATA_Y.c_str());  // Convert the String to a char array
-        if (TargetMode && (abs(integerValue)>5))Tilt_Move(constrain(int(integerValue),-1,2));
+        if (TargetMode && (abs(integerValue) > 5)) Tilt_Move(constrain(int(integerValue), -1, 2));
 
         Serial.print("\tY ");
         Serial.println(integerValue);
@@ -613,12 +617,12 @@ void Serial_Camera() {
 // ===                       Main Setup                         ===
 // ================================================================
 void setup() {
-  INIT_IO();
   INIT_Serial();
   INIT_Serial1();
+  INIT_LED_rgb();
+  INIT_IO();
   INIT_Motors();
   Home_TiltAxis();
-  INIT_LED_rgb();
   INIT_MPU();
   Pan_PID_Setup();
   Tilt_PID_Setup();
@@ -644,5 +648,5 @@ void loop() {
   LaunchControl();
 
 
-  Serial.println("Motor Ouput (Tilt : Pan) =\t" + String(Tilt_Output) + "\t:\t" + String(Pan_Output));
+  //Serial.println("Motor Ouput (Tilt : Pan) =\t" + String(Tilt_Output) + "\t:\t" + String(Pan_Output));
 }
