@@ -4,18 +4,14 @@
 // ### Project Summary: Automated Nerf Ball Launcher
 //
 // #### Overview:
-// This project uses an ESP32 to control an automated Nerf ball launcher. The launcher is equipped with motors for aiming and a firing mechanism, all managed through an Arduino-based system.
+//          This project uses an ESP32 to control an automated Nerf ball launcher. The launcher is equipped with motors for aiming and a firing mechanism, all managed through an Arduino-based system.
 //
 // #### Key Features of the Code:
-// 1. **Motor Control**: Manages three motors for aiming and firing using DRV8837 drivers, with motor states controlled by non-blocking routines.
-//
-// 2. **Serial and LED Feedback**: Initializes serial communication for setup feedback and uses an Adafruit NeoPixel for visual status indications.
-//
-// 3. **Sensors and Control**: Integrates an MPU6050 for orientation data, influencing PID controllers that stabilize and direct the launcher's aim.
-//
-// 4. **Launch Sequence**: Implements a state-based launch control for precise timing and execution of firing sequences.
-//
-// 5. **Command Processing**: Accepts real-time serial commands to adjust aim and initiate firing, with an optional target tracking mode to follow moving targets.
+//      1. **Motor Control**: Manages three motors for aiming and firing using DRV8837 drivers, with motor states controlled by non-blocking routines.
+//      2. **Serial and LED Feedback**: Initializes serial communication for setup feedback and uses an Adafruit NeoPixel for visual status indications.
+//      3. **Sensors and Control**: Integrates an MPU6050 for orientation data, influencing PID controllers that stabilize and direct the launcher's aim.
+//      4. **Launch Sequence**: Implements a state-based launch control for precise timing and execution of firing sequences.
+//      5. **Command Processing**: Accepts real-time serial commands to adjust aim and initiate firing, with an optional target tracking mode to follow moving targets.
 //
 // This streamlined codebase orchestrates all aspects of the launcher's operation, from initialization to real-time control, ensuring precise and responsive behavior suitable for interactive applications.
 //
