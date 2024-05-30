@@ -371,7 +371,7 @@ void Pan_Move(double value) {
 void Home_TiltAxis() {
   Serial.print("Homing Tilt/Pitch Axis : ");
 
-  MotorControl(Axis_Pitch, -2000);  // force tilt/pitch axis to hard stop home position
+  MotorControl(Axis_Pitch, -2500);  // force tilt/pitch axis to hard stop home position
 
   Serial.print(" _ ");
   delay(1000);
@@ -431,9 +431,9 @@ void LaunchControl() {
 
   switch (currentLaunchState) {
     case FIRE_STAGE:
-      if (currentMillis - previousMillis >= 1000) {
+      if (currentMillis - previousMillis >= 2000) {
         MotorControl(Axis_Launch, STOP);
-        if (currentMillis - previousMillis >= 1050) {
+        if (currentMillis - previousMillis >= 2050) {
           currentLaunchState = RESET_STAGE;
           previousMillis = currentMillis;
           Serial.println("Launch Reset");
@@ -442,9 +442,9 @@ void LaunchControl() {
       break;
 
     case RESET_STAGE:
-      if (currentMillis - previousMillis >= 1000) {
+      if (currentMillis - previousMillis >= 2000) {
         MotorControl(Axis_Launch, STOP);
-        if (currentMillis - previousMillis >= 1050) {
+        if (currentMillis - previousMillis >= 2050) {
           currentLaunchState = LOAD_STAGE;
           previousMillis = currentMillis;
           Serial.println("Launch Load");
@@ -453,9 +453,9 @@ void LaunchControl() {
       break;
 
     case LOAD_STAGE:
-      if (currentMillis - previousMillis >= 600) {
+      if (currentMillis - previousMillis >= 2000) {
         MotorControl(Axis_Launch, STOP);
-        if (currentMillis - previousMillis >= 300) {
+        if (currentMillis - previousMillis >= 2050) {
           currentLaunchState = COMPLETE;
           previousMillis = currentMillis;
         }
