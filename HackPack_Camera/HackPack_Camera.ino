@@ -1,4 +1,34 @@
 //20240516
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ### Project Summary: Vision and control of Automated Nerf Ball Launcher
+//
+// #### Overview:
+//          This project uses an ESP32 cam module to host a web interface that sends commands to control an automated Nerf ball launcher.
+//
+// #### Setup:
+//          This project relies on a number of libraries to function.
+//            1. Install the follow libraries from the lebrary manager:
+//
+//          This project relies on the ESP32 boards. Install the following:
+//            1. Under file/preferences add the following link to the "Additional board manager URLs" : https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+//            2. Install the board library "ESP32" by Espressif from the board manager
+//            
+//          Select "AI Thinker ESP32-CAM" as the target board
+//
+//          connect your PC/mobile to the "HackPack" Wifi network
+//
+//          Using a web browser navigate to http://hackpack.local or 192.168.4. wait for webserver to load.
+//
+//
+// #### Key Features of the Code:
+//      1. **Private access point**: This system hosts a private WiFi access point.
+//      2. **Web interface**: There is a web server for diplay of the video feed and control buttons for system motion.
+//      3. **Communication**: system communicates with simple uart packet to move launcher to new coordinates.
+//      5. **Facial recognition**: uses machine vision to track location of a person's face with in the frame
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Include necessary libraries
 #include "esp_camera.h"
 #include "img_converters.h"

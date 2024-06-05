@@ -6,6 +6,27 @@
 // #### Overview:
 //          This project uses an ESP32 to control an automated Nerf ball launcher. The launcher is equipped with motors for aiming and a firing mechanism, all managed through an Arduino-based system.
 //
+// #### Setup:
+//          This project relies on a number of libraries to function.
+//            1. Install the follow libraries from the lebrary manager:
+//              a. "PID" by Brett Beauregard
+//              b. "Adafruit NeoPixel" by Adafruit
+//            2. Install the following from third parties:
+//              a. I2CDEV - got to https://github.com/jrowberg/i2cdevlib and Download a .zip archive of the repo then extract all files. Move or copy the relevant folders into library subfolder, usually \Documents\Arduino\libraries (For Arduino, this means the /Arduino/I2Cdev and /Arduino/MPU6050 folders)
+//
+//          This project relies on the ESP32 boards. Install the following:
+//            1. Under file/preferences add the following link to the "Additional board manager URLs" : https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+//            2. Install the board library "ESP32" by Espressif from the board manager
+//          
+//          under tools tab:
+//            1. Select "ESP32C3 dev module" as the target board
+//            2. choose the "com port" connected to the launcher
+//            3. Enable "USB CDC on Boot"
+//            4. flash mode = "DIO"
+//            5. everything else is left as the default.
+//            
+//          When plugging in the electronics for first time, hold the BOOT button on PCB then plug in. Let go of boot after power up.
+//
 // #### Key Features of the Code:
 //      1. **Motor Control**: Manages three motors for aiming and firing using DRV8837 drivers, with motor states controlled by non-blocking routines.
 //      2. **Serial and LED Feedback**: Initializes serial communication for setup feedback and uses an Adafruit NeoPixel for visual status indications.
@@ -51,16 +72,15 @@ const int motorPins[3][2] = {
   { M3_A_PIN, M3_B_PIN }   // Motor 3: PWM_A, PWM_B
 };
 
-
 const int Axis_Pitch = 0;
 const int Axis_Launch = 1;
 const int Axis_Yaw = 2;
-
 const int STOP = 0;
 
 // ================================================================
-// ===                       IO & Motor Setup                        ===
+// ===                       IO & Motor Setup                   ===
 // ================================================================
+//-----------------------------------------------------------------
 void INIT_IO() {
   // Setup LEDC for PWM
   pinMode(M1_A_PIN, OUTPUT);  // Set PWM pins as OUTPUT
@@ -71,6 +91,7 @@ void INIT_IO() {
   pinMode(M3_B_PIN, OUTPUT);  // Set PWM pins as OUTPUT
 }
 
+//-----------------------------------------------------------------
 void INIT_Motors() {
   Serial.print("Setup Motors : ");
 
@@ -96,6 +117,7 @@ void INIT_Motors() {
 // ===                       Tone Startup                       ===
 // ================================================================
 // Tones created by each of the motors.
+//-----------------------------------------------------------------
 void Start_Tone() {
   Serial.print("Motors Tone Test : ");
 
@@ -120,6 +142,8 @@ void Start_Tone() {
 // ================================================================
 // ===                     Motor functions                      ===
 // ================================================================
+
+//-----------------------------------------------------------------
 // motorIndex = which motor, speed = how fast in positive/negative dirrection 12 bit (-4095 to 4095)
 void MotorControl(int motorIndex, int Power, int MinStartingPower = 0) {
 
@@ -167,6 +191,7 @@ const uint32_t CYAN = LED.Color(0, BRIGHTNESS, BRIGHTNESS);
 const uint32_t WHITE = LED.Color(BRIGHTNESS, BRIGHTNESS, BRIGHTNESS);
 const uint32_t OFF = LED.Color(0, 0, 0);
 
+//-----------------------------------------------------------------
 void INIT_LED_rgb() {
   Serial.print("LED Setup : ");
 
@@ -181,6 +206,7 @@ void INIT_LED_rgb() {
 // ================================================================
 // ===                  LED_rgb Set Colour Function                    ===
 // ================================================================
+//-----------------------------------------------------------------
 //Choose colour and intensity (0 to 1)
 void LED_SetColour(uint32_t colour) {
   LED.setPixelColor(0, colour);
@@ -193,6 +219,7 @@ void LED_SetColour(uint32_t colour) {
 const int rainbowSpeed = 11;  // Adjust this value for the desired speed
 unsigned long TimeLimit_Neo = 0;
 int pixelHue = 0;
+//-----------------------------------------------------------------
 void LED_Rainbow() {
   if (millis() > TimeLimit_Neo) {
     if (pixelHue > 65535) pixelHue = 1;
@@ -233,7 +260,7 @@ void dmpDataReady() {
 #define MPU_Interrupt_Pin 1
 #define SCL_Pin 2
 #define SDA_Pin 3
-
+//-----------------------------------------------------------------
 void INIT_MPU() {
   // join I2C bus (I2Cdev library doesn't do this automatically)
 
@@ -308,7 +335,7 @@ VectorFloat gravity;     // [x, y, z]            gravity vector
 Quaternion q;            // [w, x, y, z]         quaternion container
 uint8_t fifoBuffer[64];  // FIFO storage buffer
 double Pitch = 0, Roll = 0, Yaw = 0;
-
+//-----------------------------------------------------------------
 void Loop_MPU() {
   // if programming failed, don't try to do anything
   if (!dmpReady) return;
@@ -338,6 +365,7 @@ void Loop_MPU() {
 double Pan_Target = 0;
 double Pan_Kp = 200, Pan_Ki = 0, Pan_Kd = 0, Pan_Setpoint, Pan_Input, Pan_Output;
 PID Pan_PID(&Pan_Input, &Pan_Output, &Pan_Setpoint, Pan_Kp, Pan_Ki, Pan_Kd, DIRECT);
+//-----------------------------------------------------------------
 void Pan_PID_Setup() {
   Serial.print("Pan PID Setup : ");
 
@@ -351,6 +379,7 @@ void Pan_PID_Setup() {
 double Tilt_Target = 80;
 double Tilt_Kp = 150, Tilt_Ki = 0, Tilt_Kd = 0, Tilt_Setpoint, Tilt_Input, Tilt_Output;
 PID Tilt_PID(&Tilt_Input, &Tilt_Output, &Tilt_Setpoint, Tilt_Kp, Tilt_Ki, Tilt_Kd, DIRECT);
+//-----------------------------------------------------------------
 void Tilt_PID_Setup() {
   Serial.print("Tilt PID Setup : ");
 
@@ -364,7 +393,7 @@ void Tilt_PID_Setup() {
 // ================================================================
 // ===                       Pan Control                         ===
 // ================================================================
-
+//-----------------------------------------------------------------
 void PanControl(int input = 0) {
 
   Pan_Setpoint = constrain(input, -120, 120);
@@ -376,6 +405,7 @@ void PanControl(int input = 0) {
   // Serial.println("CurrentYaw: "+String(Pan_Input) + " Target: " + String(Pan_Setpoint)+ " Output: " + String(Pan_Output));
 }
 
+//-----------------------------------------------------------------
 void Pan_Move(double value) {
   Pan_Target += value;
   Pan_Target = constrain(Pan_Target, -100, 100);
@@ -385,7 +415,7 @@ void Pan_Move(double value) {
 // ================================================================
 // ===                Home Tilt / Pitch Axis                     ===
 // ================================================================
-
+//-----------------------------------------------------------------
 void Home_TiltAxis() {
   Serial.print("Homing Tilt/Pitch Axis : ");
 
@@ -406,7 +436,7 @@ void Home_TiltAxis() {
 // ================================================================
 // ===                       Tilt Control                         ===
 // ================================================================
-
+//-----------------------------------------------------------------
 void TiltControl(int input = 0) {
   int MinPower = 1500;
   Tilt_Setpoint = constrain(input, 0, 80);
@@ -417,7 +447,7 @@ void TiltControl(int input = 0) {
   if (abs(Tilt_Setpoint - Tilt_Input) > 1) MotorControl(Axis_Pitch, Tilt_Output, MinPower);
   else MotorControl(Axis_Pitch, STOP);
 }
-
+//-----------------------------------------------------------------
 void Tilt_Move(double value) {
   Tilt_Target += value;
   Tilt_Target = constrain(Tilt_Target, 0, 80);
@@ -442,6 +472,7 @@ LaunchState currentLaunchState = READY;
 unsigned long previousMillis = 0;
 int cycleCount = 0;
 
+//-----------------------------------------------------------------
 // The LaunchControl function now using a non-blocking approach
 void LaunchControl() {
 
@@ -501,6 +532,7 @@ void LaunchControl() {
   }
 }
 
+//-----------------------------------------------------------------
 void Launch() {
   if (currentLaunchState == READY) currentLaunchState = START;
 }
@@ -515,6 +547,7 @@ String serialBuffer = "";  // Buffer to hold incoming data
 int Position_Pan = 0;
 int Position_Tilt = 80;
 
+//-----------------------------------------------------------------
 void Serial_USB() {
   while (Serial.available()) {               // Check if there is data on the serial port
     char inChar = (char)Serial.read();       // Read a character from the serial buffer
@@ -530,6 +563,7 @@ void Serial_USB() {
   }
 }
 
+//-----------------------------------------------------------------
 void ProcessCommand(String command) {
   // Process the command string
   Serial.println("Received USB command: " + command);  // Echo the command for debugging
@@ -558,6 +592,8 @@ void ProcessCommand(String command) {
 // ================================================================
 #define UART_DataTx 21
 #define UART_DataRx 20
+
+//-----------------------------------------------------------------
 void INIT_Serial1() {
   Serial1.begin(115200, SERIAL_8N1, UART_DataRx, UART_DataTx);
   Serial.println("Serial1 start");
@@ -566,6 +602,8 @@ void INIT_Serial1() {
 
 int integerValue = 0;
 bool TargetMode = 0;
+
+//-----------------------------------------------------------------
 void Serial_Camera() {
 
   if (Serial1.available()) {
@@ -652,19 +690,13 @@ void setup() {
 
 void loop() {
   //LED_Rainbow();
-
   Loop_MPU();
-
   Serial_USB();  // Check for new serial commands
   Serial_Camera();
-
   Pan_Target = constrain(Pan_Target, -120, 120);
   Tilt_Target = constrain(Tilt_Target, 0, 80);
   PanControl(Pan_Target);
   TiltControl(Tilt_Target);
-
   LaunchControl();
-
-
   //Serial.println("Motor Ouput (Tilt : Pan) =\t" + String(Tilt_Output) + "\t:\t" + String(Pan_Output));
 }
