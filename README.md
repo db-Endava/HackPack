@@ -25,4 +25,4 @@ Contributions to the HackPack are welcome! Please feel free to submit pull reque
 This project is licensed under the [MIT License](LICENSE).
 
 ## Acknowledgments
-Thanks to all contributors who have helped in building and maintaining the HackPack project.
+Thanks to all contributors who have helped in building and maintaining the HackPack project, The Endava Physical Computing.
