@@ -46,11 +46,22 @@
 
 void INIT_Serial() {
   Serial.begin(115200);
-  long Timeout = millis() + 3000;
-  while (!Serial || (millis() < Timeout)) {
-    ;  // wait for serial port to connect. Needed for native USB port only
-  }
+  // long Timeout = millis() + 3000;
+  // while (!Serial || (millis() < Timeout)) {
+  //   ;  // wait for serial port to connect. Needed for native USB port only
+  // }
   Serial.println("Setup Serial Complete");
+}
+
+// ================================================================
+// ===                    Serial Control                        ===
+// ================================================================
+#define UART_DataTx 21
+#define UART_DataRx 20
+//-----------------------------------------------------------------
+void INIT_Serial_UART() {
+  Serial1.begin(115200, SERIAL_8N1, UART_DataRx, UART_DataTx);
+  Serial.println("Serial1 start");
 }
 
 // ================================================================
@@ -621,17 +632,7 @@ void ProcessCommand(String command) {
   }
 }
 
-// ================================================================
-// ===                    Serial Control                        ===
-// ================================================================
-#define UART_DataTx 21
-#define UART_DataRx 20
 
-//-----------------------------------------------------------------
-void INIT_Serial1() {
-  Serial1.begin(115200, SERIAL_8N1, UART_DataRx, UART_DataTx);
-  Serial.println("Serial1 start");
-}
 
 
 int integerValue = 0;
@@ -648,7 +649,7 @@ void Serial_Camera() {
       // Convert the ASCII integer to an int
       integerValue = atoi(DATA_X.c_str());  // Convert the String to a char array
       int Pan_Value = 0;
-      if (TargetMode && (abs(integerValue) > 20)) Pan_Value = int(integerValue / abs(integerValue) * (20));
+      if (TargetMode && (abs(integerValue) > 15)) Pan_Value = int(integerValue / abs(integerValue) * (15));
       else if (TargetMode && (abs(integerValue) > 2)) Pan_Value = int(integerValue / 2);
       Pan_Move(Pan_Value);
 
@@ -661,7 +662,7 @@ void Serial_Camera() {
         DATA_Y = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
         // Convert the ASCII integer to an int
         integerValue = atoi(DATA_Y.c_str());  // Convert the String to a char array
-        if (TargetMode && (abs(integerValue) > 20)) Tilt_Move(int(integerValue / abs(integerValue) * (20 / 6)));
+        if (TargetMode && (abs(integerValue) > 20)) Tilt_Move(int(integerValue / abs(integerValue) * (20 / 5)));
         else if (TargetMode && (abs(integerValue) > 2)) Tilt_Move(int(integerValue / 6));
 
         Serial.print("\tY ");
@@ -711,7 +712,7 @@ void Serial_Camera() {
 // ================================================================
 void setup() {
   INIT_Serial();
-  INIT_Serial1();
+  INIT_Serial_UART();
   INIT_LED_rgb();
   INIT_IO();
   INIT_Motors();
