@@ -17,14 +17,14 @@
 //          This project relies on the ESP32 boards. Install the following:
 //            1. Under file/preferences add the following link to the "Additional board manager URLs" : https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 //            2. Install the board library "ESP32" by Espressif from the board manager
-//          
+//
 //          under tools tab:
 //            1. Select "ESP32C3 dev module" as the target board
 //            2. choose the "com port" connected to the launcher
 //            3. Enable "USB CDC on Boot"
 //            4. flash mode = "DIO"
 //            5. everything else is left as the default.
-//            
+//
 //          When plugging in the electronics for first time, hold the BOOT button on PCB then plug in. Let go of boot after power up.
 //
 // #### Key Features of the Code:
@@ -72,6 +72,19 @@ const int motorPins[3][2] = {
   { M3_A_PIN, M3_B_PIN }   // Motor 3: PWM_A, PWM_B
 };
 
+const int Motor1_CH_A = 0;
+const int Motor1_CH_B = 1;
+const int Motor2_CH_A = 2;
+const int Motor2_CH_B = 3;
+const int Motor3_CH_A = 4;
+const int Motor3_CH_B = 5;
+
+const int motorChannel[3][2] = {
+  { Motor1_CH_A, Motor1_CH_B },  // Motor 1: PWM_A, PWM_B
+  { Motor2_CH_A, Motor2_CH_B },  // Motor 2: PWM_A, PWM_B
+  { Motor3_CH_A, Motor3_CH_B }   // Motor 3: PWM_A, PWM_B
+};
+
 const int Axis_Pitch = 0;
 const int Axis_Launch = 1;
 const int Axis_Yaw = 2;
@@ -92,6 +105,8 @@ void INIT_IO() {
 }
 
 //-----------------------------------------------------------------
+
+
 void INIT_Motors() {
   Serial.print("Setup Motors : ");
 
@@ -102,13 +117,19 @@ void INIT_Motors() {
 
   uint32_t PWM_frequency = 15000;
   uint8_t PWM_resolution = 8;
+  ledcSetup(Motor1_CH_A, PWM_frequency, PWM_resolution);
+  ledcSetup(Motor1_CH_B, PWM_frequency, PWM_resolution);
+  ledcSetup(Motor2_CH_A, PWM_frequency, PWM_resolution);
+  ledcSetup(Motor2_CH_B, PWM_frequency, PWM_resolution);
+  ledcSetup(Motor3_CH_A, PWM_frequency, PWM_resolution);
+  ledcSetup(Motor3_CH_B, PWM_frequency, PWM_resolution);
 
-  ledcAttach(M1_A_PIN, PWM_frequency, PWM_resolution);
-  ledcAttach(M1_B_PIN, PWM_frequency, PWM_resolution);
-  ledcAttach(M2_A_PIN, PWM_frequency, PWM_resolution);
-  ledcAttach(M2_B_PIN, PWM_frequency, PWM_resolution);
-  ledcAttach(M3_A_PIN, PWM_frequency, PWM_resolution);
-  ledcAttach(M3_B_PIN, PWM_frequency, PWM_resolution);
+  ledcAttachPin(M1_A_PIN, Motor1_CH_A);
+  ledcAttachPin(M1_B_PIN, Motor1_CH_B);
+  ledcAttachPin(M2_A_PIN, Motor2_CH_A);
+  ledcAttachPin(M2_B_PIN, Motor2_CH_B);
+  ledcAttachPin(M3_A_PIN, Motor3_CH_A);
+  ledcAttachPin(M3_B_PIN, Motor3_CH_B);
 
   Serial.println("Setup Compelete");
 }
@@ -159,15 +180,15 @@ void MotorControl(int motorIndex, int Power, int MinStartingPower = 0) {
   // Set the direction based on the sign of the speed
   if (Power > STOP) {
     // Move forward: set PWM_A to speed, PWM_B to 0
-    ledcWrite(motorPins[motorIndex][0], pwmValue);  // PWM_A
-    ledcWrite(motorPins[motorIndex][1], STOP);      // PWM_B
+    ledcWrite(motorChannel[motorIndex][0], pwmValue);  // PWM_A
+    ledcWrite(motorChannel[motorIndex][1], STOP);      // PWM_B
   } else if (Power < STOP) {
     // Move backward: set PWM_A to 0, PWM_B to speed
-    ledcWrite(motorPins[motorIndex][0], STOP);      // PWM_A
-    ledcWrite(motorPins[motorIndex][1], pwmValue);  // PWM_B
+    ledcWrite(motorChannel[motorIndex][0], STOP);      // PWM_A
+    ledcWrite(motorChannel[motorIndex][1], pwmValue);  // PWM_B
   } else {
-    ledcWrite(motorPins[motorIndex][0], STOP);  // PWM_A
-    ledcWrite(motorPins[motorIndex][1], STOP);  // PWM_B
+    ledcWrite(motorChannel[motorIndex][0], STOP);  // PWM_A
+    ledcWrite(motorChannel[motorIndex][1], STOP);  // PWM_B
   }
 }
 
@@ -614,7 +635,7 @@ void Serial_Camera() {
       DATA_X = Serial1.readStringUntil('\t');  // Read the data until a tab is encountered
       // Convert the ASCII integer to an int
       integerValue = atoi(DATA_X.c_str());  // Convert the String to a char array
-      if (TargetMode && (abs(integerValue) > 5)) Pan_Move(constrain(int(integerValue), -3, 3));
+      if (TargetMode && (abs(integerValue) > 4)) Pan_Move(int(integerValue/2));
 
       Serial.print("Received Location:\tX ");
       Serial.print(integerValue);
@@ -625,7 +646,7 @@ void Serial_Camera() {
         DATA_Y = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
         // Convert the ASCII integer to an int
         integerValue = atoi(DATA_Y.c_str());  // Convert the String to a char array
-        if (TargetMode && (abs(integerValue) > 5)) Tilt_Move(constrain(int(integerValue), -1, 2));
+        if (TargetMode && (abs(integerValue) > 3)) Tilt_Move(int(integerValue/6));
 
         Serial.print("\tY ");
         Serial.println(integerValue);

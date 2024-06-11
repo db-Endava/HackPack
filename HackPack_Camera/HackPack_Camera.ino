@@ -13,7 +13,7 @@
 //          This project relies on the ESP32 boards. Install the following:
 //            1. Under file/preferences add the following link to the "Additional board manager URLs" : https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 //            2. Install the board library "ESP32" by Espressif from the board manager
-//            
+//
 //          Select "AI Thinker ESP32-CAM" as the target board
 //
 //          connect your PC/mobile to the "HackPack" Wifi network
@@ -84,7 +84,6 @@ httpd_handle_t stream_httpd = NULL;
 
 #define CONFIG_ESP_FACE_DETECT_ENABLED 1
 
-#if CONFIG_ESP_FACE_DETECT_ENABLED
 
 #include <vector>
 #include "human_face_detect_msr01.hpp"
@@ -101,7 +100,6 @@ httpd_handle_t stream_httpd = NULL;
 #define FACE_COLOR_YELLOW (FACE_COLOR_RED | FACE_COLOR_GREEN)
 #define FACE_COLOR_CYAN (FACE_COLOR_BLUE | FACE_COLOR_GREEN)
 #define FACE_COLOR_PURPLE (FACE_COLOR_BLUE | FACE_COLOR_RED)
-#endif
 
 // ================================================================
 // ===                         Web Page                         ===
@@ -255,48 +253,52 @@ static esp_err_t index_handler(httpd_req_t *req) {
 static void draw_face_boxes(fb_data_t *fb, std::list<dl::detect::result_t> *results, int face_id) {
   int x, y, w, h;
   uint32_t color = FACE_COLOR_GREEN;
-  if (face_id < 0) {
-    color = FACE_COLOR_RED;
-  } else if (face_id > 0) {
-    color = FACE_COLOR_CYAN;
-  }
+  
   if (fb->bytes_per_pixel == 2) {
-    //color = ((color >> 8) & 0xF800) | ((color >> 3) & 0x07E0) | (color & 0x001F);
-    color = ((color >> 16) & 0x001F) | ((color >> 3) & 0x07E0) | ((color << 8) & 0xF800);
+    color = ((color >> 8) & 0xF800) | ((color >> 3) & 0x07E0) | (color & 0x001F);
+    // color = ((color >> 16) & 0x001F) | ((color >> 3) & 0x07E0) | ((color << 8) & 0xF800);
   }
   int i = 0;
   for (std::list<dl::detect::result_t>::iterator prediction = results->begin(); prediction != results->end(); prediction++, i++) {
     // rectangle box
     x = (int)prediction->box[0];
     y = (int)prediction->box[1];
+    if (x < 1) x = 1;
+    if (y < 1) y = 1;
+
     w = (int)prediction->box[2] - x + 1;
     h = (int)prediction->box[3] - y + 1;
+    if (w < 1) w = 1;
+    if (h < 1) h = 1;
+//The center coordinates of the bounding box are calculated and printed to the Serial port.
+    int Center_X = (x + (w / 2)) - 80;
+    int Center_Y = (y + (h / 2)) - 60;
 
-int Center_X = (x+(w/2))-160;
-int Center_Y = (y+(h/2))-120;
-
-    // Output box location and size to the Serial port
     Serial.printf("X%d\tY%d\n", Center_X, Center_Y);
 
+//Ensure the bounding box does not exceed the framebuffer dimensions
     if ((x + w) > fb->width) {
       w = fb->width - x;
     }
     if ((y + h) > fb->height) {
       h = fb->height - y;
     }
+
+//Draw the bounding box on the framebuffer using horizontal and vertical lines.
     fb_gfx_drawFastHLine(fb, x, y, w, color);
     fb_gfx_drawFastHLine(fb, x, y + h - 1, w, color);
     fb_gfx_drawFastVLine(fb, x, y, h, color);
     fb_gfx_drawFastVLine(fb, x + w - 1, y, h, color);
-#if TWO_STAGE
-    // landmarks (left eye, mouth left, nose, right eye, mouth right)
-    int x0, y0, j;
-    for (j = 0; j < 10; j += 2) {
-      x0 = (int)prediction->keypoint[j];
-      y0 = (int)prediction->keypoint[j + 1];
-      fb_gfx_fillRect(fb, x0, y0, 3, 3, color);
-    }
-#endif
+
+    // #if TWO_STAGE
+    //     // landmarks (left eye, mouth left, nose, right eye, mouth right)
+    //     int x0, y0, j;
+    //     for (j = 0; j < 10; j += 2) {
+    //       x0 = (int)prediction->keypoint[j];
+    //       y0 = (int)prediction->keypoint[j + 1];
+    //       fb_gfx_fillRect(fb, x0, y0, 3, 3, color);
+    //     }
+    // #endif
   }
 }
 
@@ -323,18 +325,18 @@ static esp_err_t stream_handler(httpd_req_t *req) {
       Serial.println("Camera capture failed");
       res = ESP_FAIL;
     } else {
-      if (fb->width > 319) {
+      if (fb->width > 159) {
         if (fb->format != PIXFORMAT_JPEG) {
 
-#if TWO_STAGE
-          HumanFaceDetectMSR01 s1(0.1F, 0.5F, 10, 0.2F);
-          HumanFaceDetectMNP01 s2(0.5F, 0.3F, 5);
-          std::list<dl::detect::result_t> &candidates = s1.infer((uint16_t *)fb->buf, { (int)fb->height, (int)fb->width, 3 });
-          std::list<dl::detect::result_t> &results = s2.infer((uint16_t *)fb->buf, { (int)fb->height, (int)fb->width, 3 }, candidates);
-#else
-          HumanFaceDetectMSR01 s1(0.3F, 0.5F, 10, 0.2F);
+          // #if TWO_STAGE
+          //           HumanFaceDetectMSR01 s1(0.1F, 0.5F, 10, 0.2F);
+          //           HumanFaceDetectMNP01 s2(0.5F, 0.3F, 5);
+          //           std::list<dl::detect::result_t> &candidates = s1.infer((uint16_t *)fb->buf, { (int)fb->height, (int)fb->width, 3 });
+          //           std::list<dl::detect::result_t> &results = s2.infer((uint16_t *)fb->buf, { (int)fb->height, (int)fb->width, 3 }, candidates);
+          // #else
+          HumanFaceDetectMSR01 s1(0.05F, 0.3F, 1, 0.5F);
           std::list<dl::detect::result_t> &results = s1.infer((uint16_t *)fb->buf, { (int)fb->height, (int)fb->width, 3 });
-#endif
+          // #endif
 
           if (results.size() > 0) {
             fb_data_t rfb;
@@ -383,7 +385,7 @@ static esp_err_t stream_handler(httpd_req_t *req) {
       break;
     }
     vTaskDelay(40 / portTICK_PERIOD_MS);
-    // vTaskDelay(200);
+    //vTaskDelay(50);
   }
   return res;
 }
@@ -474,8 +476,6 @@ void WifiSetup() {
   // Set up mDNS responder
   if (!MDNS.begin("hackpack")) Serial.println("Error setting up MDNS responder!");
   MDNS.addService("http", "tcp", 80);
-
-  Serial.println("WiFi system running");
 }
 
 void Camera_Setup() {
@@ -500,14 +500,15 @@ void Camera_Setup() {
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  //  config.pixel_format = PIXFORMAT_JPEG;
   config.pixel_format = PIXFORMAT_RGB565;
 
 
   // Set frame size and quality
-  config.frame_size = FRAMESIZE_QVGA;  // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
-  config.jpeg_quality = 20;            //10-63 lower number means higher quality
-  config.fb_count = 2;                 // frame buffer count
+  config.frame_size = FRAMESIZE_QQVGA;  // FRAMESIZE_ + 96X96|QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA|
+  config.grab_mode = CAMERA_GRAB_LATEST;
+  config.fb_location = CAMERA_FB_IN_PSRAM;
+  config.jpeg_quality = 20;  //10-63 lower number means higher quality
+  config.fb_count = 1;       // frame buffer count
 
   // Initialize the camera
   esp_err_t err = esp_camera_init(&config);
@@ -527,7 +528,7 @@ void Camera_Setup() {
   s->set_awb_gain(s, 1);                    // 0 = disable , 1 = enable
   s->set_wb_mode(s, 0);                     // 0 to 4 - if awb_gain enabled (0 - Auto, 1 - Sunny, 2 - Cloudy, 3 - Office, 4 - Home)
   s->set_exposure_ctrl(s, 1);               // 0 = disable , 1 = enable
-  s->set_aec2(s, 0);                        // 0 = disable , 1 = enable
+  s->set_aec2(s, 1);                        // 0 = disable , 1 = enable
   s->set_ae_level(s, 0);                    // -2 to 2
   s->set_aec_value(s, 300);                 // 0 to 1200
   s->set_gain_ctrl(s, 1);                   // 0 = disable , 1 = enable
@@ -548,15 +549,17 @@ void Camera_Setup() {
 
 // Arduino setup function
 void setup() {
+  // Setup serial comms
+  Serial.begin(115200);
+  Serial.setDebugOutput(false);
+
   // Disable brownout detector
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  //disable brownout detector
 
   // Set up LED output pin
   pinMode(LED_OUTPUT, OUTPUT);
 
-  // Setup serial comms
-  Serial.begin(115200);
-  Serial.setDebugOutput(false);
+
 
   //start Camera system
   Camera_Setup();
@@ -566,6 +569,8 @@ void setup() {
 
   // Start streaming web server
   startCameraServer();
+
+  Serial.println("HackPack Camera Ready");
 }
 
 // ================================================================
@@ -575,4 +580,3 @@ void setup() {
 void loop() {
   // Loop function here...
 }
-
