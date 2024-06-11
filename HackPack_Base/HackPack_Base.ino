@@ -421,7 +421,7 @@ void PanControl(int input = 0) {
   Pan_Input = Yaw;
   Pan_PID.Compute();
 
-  if (abs(Pan_Setpoint - Pan_Input) > 1) MotorControl(Axis_Yaw, Pan_Output, 600);
+  if (abs(Pan_Setpoint - Pan_Input) > 0.1) MotorControl(Axis_Yaw, Pan_Output, 600);
   else MotorControl(Axis_Yaw, STOP);
   // Serial.println("CurrentYaw: "+String(Pan_Input) + " Target: " + String(Pan_Setpoint)+ " Output: " + String(Pan_Output));
 }
@@ -465,7 +465,7 @@ void TiltControl(int input = 0) {
   Tilt_Input = Pitch;
   Tilt_PID.Compute();
 
-  if (abs(Tilt_Setpoint - Tilt_Input) > 1) MotorControl(Axis_Pitch, Tilt_Output, MinPower);
+  if (abs(Tilt_Setpoint - Tilt_Input) > 0.1) MotorControl(Axis_Pitch, Tilt_Output, MinPower);
   else MotorControl(Axis_Pitch, STOP);
 }
 //-----------------------------------------------------------------
