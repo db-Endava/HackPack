@@ -635,6 +635,7 @@ void Serial_Camera() {
       DATA_X = Serial1.readStringUntil('\t');  // Read the data until a tab is encountered
       // Convert the ASCII integer to an int
       integerValue = atoi(DATA_X.c_str());  // Convert the String to a char array
+      if (TargetMode && (abs(integerValue) > 10)) Pan_Move(int(integerValue/abs(integerValue)*5));
       if (TargetMode && (abs(integerValue) > 4)) Pan_Move(int(integerValue/2));
 
       Serial.print("Received Location:\tX ");
@@ -646,6 +647,7 @@ void Serial_Camera() {
         DATA_Y = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
         // Convert the ASCII integer to an int
         integerValue = atoi(DATA_Y.c_str());  // Convert the String to a char array
+        if (TargetMode && (abs(integerValue) > 20)) Tilt_Move(int(integerValue/abs(integerValue)*3));
         if (TargetMode && (abs(integerValue) > 3)) Tilt_Move(int(integerValue/6));
 
         Serial.print("\tY ");
