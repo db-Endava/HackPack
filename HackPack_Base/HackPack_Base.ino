@@ -16,7 +16,7 @@
 //
 //          This project relies on the ESP32 boards. Install the following:
 //            1. Under file/preferences add the following link to the "Additional board manager URLs" : https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-//            2. Install the board library "ESP32" by Espressif from the board manager
+//            2. Install the board library "ESP32" v2.0.17 by Espressif from the board manager. V2.0.17bis an older version of the library which has stable face detection. please ensure you install version 2.0.17 or you code will not compile.
 //
 //          under tools tab:
 //            1. Select "ESP32C3 dev module" as the target board
