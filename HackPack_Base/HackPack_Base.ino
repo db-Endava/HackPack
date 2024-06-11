@@ -203,13 +203,14 @@ void MotorControl(int motorIndex, int Power, int MinStartingPower = 0) {
 Adafruit_NeoPixel LED(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 //Predefine common colours
-const uint32_t RED = LED.Color(BRIGHTNESS, 0, 0);
-const uint32_t GREEN = LED.Color(0, BRIGHTNESS, 0);
-const uint32_t BLUE = LED.Color(0, 0, BRIGHTNESS);
-const uint32_t YELLOW = LED.Color(BRIGHTNESS, BRIGHTNESS, 0);
-const uint32_t PURPLE = LED.Color(BRIGHTNESS, 0, BRIGHTNESS);
-const uint32_t CYAN = LED.Color(0, BRIGHTNESS, BRIGHTNESS);
-const uint32_t WHITE = LED.Color(BRIGHTNESS, BRIGHTNESS, BRIGHTNESS);
+const uint32_t RED = LED.Color(255, 0, 0);
+const uint32_t GREEN = LED.Color(0, 255, 0);
+const uint32_t BLUE = LED.Color(0, 0, 255);
+const uint32_t YELLOW = LED.Color(255, 255, 0);
+const uint32_t ORANGE = LED.Color(255, 100, 0);
+const uint32_t PURPLE = LED.Color(255, 0, 255);
+const uint32_t CYAN = LED.Color(0, 255, 255);
+const uint32_t WHITE = LED.Color(255, 255, 255);
 const uint32_t OFF = LED.Color(0, 0, 0);
 
 //-----------------------------------------------------------------
@@ -242,6 +243,7 @@ unsigned long TimeLimit_Neo = 0;
 int pixelHue = 0;
 //-----------------------------------------------------------------
 void LED_Rainbow() {
+    LED.setBrightness(BRIGHTNESS);
   if (millis() > TimeLimit_Neo) {
     if (pixelHue > 65535) pixelHue = 1;
     pixelHue += 100;
@@ -251,6 +253,17 @@ void LED_Rainbow() {
   }
 }
 
+bool TargetMode = 0;
+unsigned long LED_TimeOut = 0;
+void LED_Status() {
+  if (TargetMode) {
+    if (millis() > LED_TimeOut + 200) {
+      LED_SetColour(BLUE);
+      LED_TimeOut = millis() + 300;
+    } else if (millis() > LED_TimeOut) LED_SetColour(ORANGE);
+    
+  }else LED_Rainbow();
+}
 // ================================================================
 // ===           MPU Declarations and configurations            ===
 // ================================================================
@@ -622,7 +635,6 @@ void INIT_Serial1() {
 
 
 int integerValue = 0;
-bool TargetMode = 0;
 
 //-----------------------------------------------------------------
 void Serial_Camera() {
@@ -635,8 +647,10 @@ void Serial_Camera() {
       DATA_X = Serial1.readStringUntil('\t');  // Read the data until a tab is encountered
       // Convert the ASCII integer to an int
       integerValue = atoi(DATA_X.c_str());  // Convert the String to a char array
-      if (TargetMode && (abs(integerValue) > 10)) Pan_Move(int(integerValue/abs(integerValue)*5));
-      if (TargetMode && (abs(integerValue) > 4)) Pan_Move(int(integerValue/2));
+      int Pan_Value = 0;
+      if (TargetMode && (abs(integerValue) > 20)) Pan_Value = int(integerValue / abs(integerValue) * (20));
+      else if (TargetMode && (abs(integerValue) > 2)) Pan_Value = int(integerValue / 2);
+      Pan_Move(Pan_Value);
 
       Serial.print("Received Location:\tX ");
       Serial.print(integerValue);
@@ -647,8 +661,8 @@ void Serial_Camera() {
         DATA_Y = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
         // Convert the ASCII integer to an int
         integerValue = atoi(DATA_Y.c_str());  // Convert the String to a char array
-        if (TargetMode && (abs(integerValue) > 20)) Tilt_Move(int(integerValue/abs(integerValue)*3));
-        if (TargetMode && (abs(integerValue) > 3)) Tilt_Move(int(integerValue/6));
+        if (TargetMode && (abs(integerValue) > 20)) Tilt_Move(int(integerValue / abs(integerValue) * (20 / 6)));
+        else if (TargetMode && (abs(integerValue) > 2)) Tilt_Move(int(integerValue / 6));
 
         Serial.print("\tY ");
         Serial.println(integerValue);
@@ -712,7 +726,7 @@ void setup() {
 // ================================================================
 
 void loop() {
-  //LED_Rainbow();
+  LED_Status();
   Loop_MPU();
   Serial_USB();  // Check for new serial commands
   Serial_Camera();
