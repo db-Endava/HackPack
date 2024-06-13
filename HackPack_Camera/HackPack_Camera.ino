@@ -40,11 +40,9 @@
 #include <esp_system.h>
 #include "esp_wifi.h"
 #include "fb_gfx.h"
-// #include "sdkconfig.h"
 #include "esp_err.h"
 #include "driver/ledc.h"
 #include "sensor.h"
-// #include "sys/time.h"
 
 // Pin definitions and other constants
 #define PART_BOUNDARY "123456789000000000000987654321"
