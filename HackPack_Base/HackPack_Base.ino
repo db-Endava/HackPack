@@ -254,7 +254,7 @@ unsigned long TimeLimit_Neo = 0;
 int pixelHue = 0;
 //-----------------------------------------------------------------
 void LED_Rainbow() {
-    LED.setBrightness(BRIGHTNESS);
+  LED.setBrightness(BRIGHTNESS);
   if (millis() > TimeLimit_Neo) {
     if (pixelHue > 65535) pixelHue = 1;
     pixelHue += 100;
@@ -272,8 +272,8 @@ void LED_Status() {
       LED_SetColour(BLUE);
       LED_TimeOut = millis() + 300;
     } else if (millis() > LED_TimeOut) LED_SetColour(ORANGE);
-    
-  }else LED_Rainbow();
+
+  } else LED_Rainbow();
 }
 // ================================================================
 // ===           MPU Declarations and configurations            ===
@@ -441,19 +441,21 @@ void Tilt_PID_Setup() {
 //-----------------------------------------------------------------
 void PanControl(int input = 0) {
 
-  Pan_Setpoint = constrain(input, -120, 120);
-  Pan_Input = Yaw;
+  Pan_Setpoint = constrain(input, -120, 120);  // requested virtual location/position
+  Pan_Input = Yaw;                             // sensor based actual location/position
   Pan_PID.Compute();
 
-  if (abs(Pan_Setpoint - Pan_Input) > 0.1) MotorControl(Axis_Yaw, Pan_Output, 600);
+  if (abs(Pan_Setpoint - Pan_Input) > 0.1) MotorControl(Axis_Yaw, Pan_Output, 1000);
   else MotorControl(Axis_Yaw, STOP);
   // Serial.println("CurrentYaw: "+String(Pan_Input) + " Target: " + String(Pan_Setpoint)+ " Output: " + String(Pan_Output));
 }
 
 //-----------------------------------------------------------------
 void Pan_Move(double value) {
-  Pan_Target += value;
-  Pan_Target = constrain(Pan_Target, -100, 100);
+  if (abs(Pan_Target - Pan_Input) < 10) { // to eliminate virtual position overflow Error
+    if (abs(value) > 0) Pan_Target += value;
+    else Pan_Target = Pan_Input;
+  }
 }
 
 
@@ -483,10 +485,10 @@ void Home_TiltAxis() {
 // ================================================================
 //-----------------------------------------------------------------
 void TiltControl(int input = 0) {
-  int MinPower = 1500;
-  Tilt_Setpoint = constrain(input, 0, 80);
+  int MinPower = 1700;
+  Tilt_Setpoint = constrain(input, 0, 80); // requested virtual location/position
+  Tilt_Input = Pitch;                      // sensor based actual location/position
 
-  Tilt_Input = Pitch;
   Tilt_PID.Compute();
 
   if (abs(Tilt_Setpoint - Tilt_Input) > 0.1) MotorControl(Axis_Pitch, Tilt_Output, MinPower);
@@ -494,8 +496,10 @@ void TiltControl(int input = 0) {
 }
 //-----------------------------------------------------------------
 void Tilt_Move(double value) {
-  Tilt_Target += value;
-  Tilt_Target = constrain(Tilt_Target, 0, 80);
+  if (abs(Tilt_Target - Tilt_Input) < 30) { // to eliminate virtual position overflow Error
+    if (abs(value) > 0) Tilt_Target += value;
+    else Tilt_Target = Tilt_Input;
+  }
 }
 
 // ================================================================
@@ -650,7 +654,8 @@ void Serial_Camera() {
       integerValue = atoi(DATA_X.c_str());  // Convert the String to a char array
       int Pan_Value = 0;
       if (TargetMode && (abs(integerValue) > 15)) Pan_Value = int(integerValue / abs(integerValue) * (15));
-      else if (TargetMode && (abs(integerValue) > 2)) Pan_Value = int(integerValue / 2);
+      else if (TargetMode && (abs(integerValue) > 3)) Pan_Value = int(integerValue / 2);
+      if (TargetMode && (abs(integerValue) <= 3)) Pan_Value = 0;
       Pan_Move(Pan_Value);
 
       Serial.print("Received Location:\tX ");
@@ -662,8 +667,11 @@ void Serial_Camera() {
         DATA_Y = Serial1.readStringUntil('\n');  // Read the data until a '\n' is encountered
         // Convert the ASCII integer to an int
         integerValue = atoi(DATA_Y.c_str());  // Convert the String to a char array
-        if (TargetMode && (abs(integerValue) > 20)) Tilt_Move(int(integerValue / abs(integerValue) * (20 / 5)));
-        else if (TargetMode && (abs(integerValue) > 2)) Tilt_Move(int(integerValue / 6));
+        int Tilt_Value = 0;
+        if (TargetMode && (abs(integerValue) > 20)) Tilt_Value = int(integerValue / abs(integerValue) * (20 / 5));
+        else if (TargetMode && (abs(integerValue) > 3)) Tilt_Value = int(integerValue / 6);
+        if (TargetMode && (abs(integerValue) <= 3)) Tilt_Value = 0;
+        Tilt_Move(Tilt_Value);
 
         Serial.print("\tY ");
         Serial.println(integerValue);
