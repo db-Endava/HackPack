@@ -19,17 +19,6 @@ To get started with the HackPack Launcher, please refer to the detailed setup an
 
 [HackPack Launcher Setup and Operation Guide](https://github.com/db-Endava/HackPack/blob/main/HackPack%20-%20Firmware%20and%20Operational%20Guide.pdf)
 
-## Installation
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/db-Endava/HackPack.git
-   ```
-2. Navigate to the project directory:
-   ```
-   cd HackPack
-   ```
-
 ## Usage
 
 Follow the setup instructions in the provided guide to configure your development environment and hardware setup. Once configured, you can control the HackPack Launcher via the web interface as detailed in the guide.
