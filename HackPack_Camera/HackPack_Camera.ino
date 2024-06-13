@@ -150,7 +150,9 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
         'KeyS': 'down',
         'KeyD': 'right',
         'KeyL': 'ledon',
-        'KeyO': 'ledoff'
+        'KeyO': 'ledoff',
+        'KeyT': 'target',
+        'KeyG': 'shoot'
       };
 
       document.addEventListener('keydown', function(event) {
